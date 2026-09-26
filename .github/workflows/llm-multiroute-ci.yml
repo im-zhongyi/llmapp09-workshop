@@ -6,6 +6,7 @@ on:
     paths:
       - 'llm-multiroute/**'
       - '.github/workflows/llm-multiroute-ci.yml'
+      - '.trivyignore'
   pull_request:
     branches: [main, master]
     paths:
