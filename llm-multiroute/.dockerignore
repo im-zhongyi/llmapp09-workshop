@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+Dockerfile
+.dockerignore
+*.md
+k8s/
+build.sh

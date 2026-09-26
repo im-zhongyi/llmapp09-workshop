@@ -1,0 +1,86 @@
+# Usage:
+#   cp llm-multiroute/.env.example .env   # then fill in OLLAMA_API_KEY (and Langfuse keys if used)
+#   docker compose up --build
+#
+# Host ports are overridable via .env (LLM_PYTHON_PORT, LLM_MULTIROUTE_PORT, FRONTEND_PORT).
+# The frontend talks to llm-python by default; set FRONTEND_BACKEND_URL=http://llm-multiroute:8080
+# to point it at the multi-route backend instead.
+
+services:
+  llm-python:
+    build:
+      context: ./llm-python
+      dockerfile: Dockerfile
+    image: llm-python:latest
+    container_name: llm-python
+    ports:
+      - "${LLM_PYTHON_PORT:-8082}:8080"
+    environment:
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:?OLLAMA_API_KEY must be set in .env or the shell}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-https://ollama.com}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:31b}
+      - OLLAMA_TEMPERATURE=${OLLAMA_TEMPERATURE:-0.7}
+      - SERVER_PORT=8080
+    networks:
+      - llm-network
+    restart: unless-stopped
+
+  llm-multiroute:
+    build:
+      context: ./llm-multiroute
+      dockerfile: Dockerfile
+    image: llm-multiroute:latest
+    container_name: llm-multiroute
+    ports:
+      - "${LLM_MULTIROUTE_PORT:-8080}:8080"
+    environment:
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:?OLLAMA_API_KEY must be set in .env or the shell}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-https://ollama.com}
+      - OLLAMA_TEMPERATURE=${OLLAMA_TEMPERATURE:-0.7}
+      - OLLAMA_MODEL_CLASSIFY=${OLLAMA_MODEL_CLASSIFY:-gemma4:31b}
+      - OLLAMA_MODEL_SENTIMENT=${OLLAMA_MODEL_SENTIMENT:-glm-5.2}
+      - OLLAMA_MODEL_SUMMARIZE=${OLLAMA_MODEL_SUMMARIZE:-mistral-large-3:675b}
+      - OLLAMA_MODEL_INTENT=${OLLAMA_MODEL_INTENT:-minimax-m3}
+      - SERVER_PORT=8080
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      # Langfuse SDK v4 reads LANGFUSE_BASE_URL first; LANGFUSE_HOST is the deprecated fallback.
+      # Use your project's region, e.g. https://jp.cloud.langfuse.com
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-${LANGFUSE_HOST:-https://jp.cloud.langfuse.com}}
+    volumes:
+      # cost / performance / safety metrics written by app/monitoring/metrics_store.py
+      - llm-multiroute-metrics:/app/metrics
+    networks:
+      - llm-network
+    restart: unless-stopped
+
+  llm-frontend-python:
+    build:
+      context: ./llm-frontend-python
+      dockerfile: Dockerfile
+    image: llm-frontend-python:latest
+    container_name: llm-frontend-python
+    ports:
+      - "${FRONTEND_PORT:-5001}:5000"
+    environment:
+      # Resolved through Docker's internal DNS on llm-network
+      - BACKEND_URL=${FRONTEND_BACKEND_URL:-http://llm-python:8080}
+      - FLASK_PORT=5000
+      - FLASK_DEBUG=false
+    depends_on:
+      llm-python:
+        condition: service_healthy
+      llm-multiroute:
+        condition: service_started
+    networks:
+      - llm-network
+    restart: unless-stopped
+
+volumes:
+  llm-multiroute-metrics:
+    name: llm-multiroute-metrics
+
+networks:
+  llm-network:
+    name: llm-network
+    driver: bridge
