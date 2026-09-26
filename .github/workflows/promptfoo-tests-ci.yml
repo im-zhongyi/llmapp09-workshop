@@ -3,10 +3,10 @@ name: PromptFoo Tests
 on:
   push:
     branches: [main, master]
-    paths:
-      - 'promptfoo-tests/**'
-      - 'llm-multiroute/**'
-      - '.github/workflows/promptfoo-tests-ci.yml'
+    # paths:
+    #   - 'promptfoo-tests/**'
+    #   - 'llm-multiroute/**'
+    #   - '.github/workflows/promptfoo-tests-ci.yml'
   pull_request:
     branches: [main, master]
     paths:

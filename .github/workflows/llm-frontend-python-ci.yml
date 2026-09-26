@@ -3,10 +3,10 @@ name: LLM Frontend Python CI
 on:
   push:
     branches: [main, master]
-    paths:
-      - 'llm-frontend-python/**'
-      - '.github/workflows/llm-frontend-python-ci.yml'
-      - '.trivyignore'
+#    paths:
+#     - 'llm-frontend-python/**'
+#      - '.github/workflows/llm-frontend-python-ci.yml'
+#      - '.trivyignore'
   pull_request:
     branches: [main, master]
     paths:
